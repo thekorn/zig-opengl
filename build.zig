@@ -52,8 +52,8 @@ pub fn build(b: *std.Build) void {
         .name = "main_web",
         .root_source_file = b.path("src/main_web.zig"),
         .target = b.resolveTargetQuery(std.zig.CrossTarget.parse(
-                        .{ .arch_os_abi = "wasm32-freestanding" },
-                    ) catch unreachable),
+            .{ .arch_os_abi = "wasm32-freestanding" },
+        ) catch unreachable),
         .optimize = optimize,
     });
     wasm.entry = .disabled;

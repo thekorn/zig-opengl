@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas"></canvas>
+        <script src="webgl.js"></script>
+        <script>
+            let memory = null;
+
+            // This gives Zig side ability to print to browser console.
+            const consoleLog = (pointer, length) => {
+                console.log(readString(pointer, length));
+            };
+
+            // This gives Zig side ability to throw errors.
+            const throwError = (pointer, length) => {
+                console.error(readString(pointer, length));
+                debugger;
+            };
+
+            const readString = (pointer, length) => {
+                if (!memory) {
+                    return null;
+                }
+
+                // Memory in WASM is one big buffer. We can read a string from the
+                // Zig/WASM space if we know the pointer and length.
+                return new TextDecoder().decode(
+                    new Uint8Array(memory.buffer, pointer, length),
+                );
+            };
+
+            const getScale = () => {
+                return window.devicePixelRatio;
+            };
+
+            const getWidth = () => {
+                return window.innerWidth;
+            };
+
+            const getHeight = () => {
+                return window.innerHeight;
+            };
+
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            const canvas = document.getElementById("canvas");
+            canvas.width = width * getScale();
+            canvas.height = height * getScale();
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+
+            // Start app.
+            fetch("main_web.wasm")
+                .then((response) => response.arrayBuffer())
+                .then((bytes) =>
+                    WebAssembly.instantiate(bytes, {
+                        // Here we provide functions that can be used on the Zig side.
+                        env: {
+                            ...webgl,
+                            consoleLog,
+                            throwError,
+                            readString,
+                            getScale,
+                            getWidth,
+                            getHeight,
+                        },
+                    }),
+                )
+                .then((results) => {
+                    const { instance } = results;
+                    memory = instance.exports.memory;
+
+                    instance.exports.onInit_export();
+                    const onAnimationFrame_export =
+                        instance.exports.onAnimationFrame_export;
+
+                    function step() {
+                        onAnimationFrame_export();
+                        window.requestAnimationFrame(step);
+                    }
+
+                    window.requestAnimationFrame(step);
+                });
+        </script>
+    </body>
+</html>

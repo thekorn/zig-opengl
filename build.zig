@@ -48,6 +48,18 @@ pub fn build(b: *std.Build) void {
     // step when running `zig build`).
     b.installArtifact(exe);
 
+    const wasm = b.addExecutable(.{
+        .name = "main_web",
+        .root_source_file = b.path("src/main_web.zig"),
+        .target = b.resolveTargetQuery(std.zig.CrossTarget.parse(
+                        .{ .arch_os_abi = "wasm32-freestanding" },
+                    ) catch unreachable),
+        .optimize = optimize,
+    });
+    wasm.entry = .disabled;
+    wasm.rdynamic = true;
+    b.installArtifact(wasm);
+
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish
     // such a dependency.
